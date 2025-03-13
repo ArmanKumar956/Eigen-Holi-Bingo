@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Holi Bingo</title>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; }
+        .bingo-card { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; max-width: 400px; margin: 20px auto; }
+        .bingo-cell { padding: 15px; border: 2px solid #000; cursor: pointer; }
+        .crossed { background-color: lightgray; text-decoration: line-through; }
+        .submit-btn { margin-top: 20px; padding: 10px 20px; cursor: pointer; }
+        .dashboard { margin-top: 30px; }
+    </style>
+</head>
+<body>
+    <h1>Holi Themed Bingo</h1>
+    <div id="loginSection">
+        <input type="text" id="playerName" placeholder="Enter Your Name" />
+        <button onclick="startGame()">Start Game</button>
+    </div>
+    <div class="bingo-card" id="bingoCard" style="display: none;"></div>
+    <button class="submit-btn" onclick="submitCard()" style="display: none;">Submit for Review</button>
+    
+    <div class="dashboard" id="dashboard" style="display: none;">
+        <h2>Host Dashboard</h2>
+        <div id="submissions"></div>
+    </div>
+    
+    <script>
+        const firebaseConfig = {
+    apiKey: "AIzaSyA0aQaRDG-b7XtBxlTlqa4hc-1rK9YBUps",
+    authDomain: "holi-bingo.firebaseapp.com",
+    databaseURL: "https://holi-bingo-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "holi-bingo",
+    storageBucket: "holi-bingo.firebasestorage.app",
+    messagingSenderId: "929144247793",
+    appId: "1:929144247793:web:4757cfa8dad7be0d01e050"
+  };
+        
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        
+        let playerName = "";
+        const words = ["Gulal", "Pichkari", "Thandai", "Gujiya", "Rangoli", "Water Balloons", "Bhang", "Dhol", "Bonfire", "Holi Hai!", "Rainbow", "Drenched", "Colors", "Abir", "Masti", "Lassi", "Festival", "Friendship", "Dance", "Puran Poli", "Sweets", "Celebration", "Floral Rain", "Holi Song", "Folk Dance"];
+        words.sort(() => Math.random() - 0.5);
+        
+        function startGame() {
+            playerName = document.getElementById("playerName").value;
+            if (!playerName) {
+                alert("Please enter your name");
+                return;
+            }
+            document.getElementById("loginSection").style.display = "none";
+            document.getElementById("bingoCard").style.display = "grid";
+            document.querySelector(".submit-btn").style.display = "block";
+            generateBingoCard();
+        }
+        
+        function generateBingoCard() {
+            const card = document.getElementById("bingoCard");
+            words.slice(0, 25).forEach(word => {
+                let cell = document.createElement("div");
+                cell.classList.add("bingo-cell");
+                cell.innerText = word;
+                cell.onclick = () => cell.classList.toggle("crossed");
+                card.appendChild(cell);
+            });
+        }
+        
+        function submitCard() {
+            const markedWords = Array.from(document.querySelectorAll(".bingo-cell.crossed")).map(cell => cell.innerText);
+            db.ref("submissions/" + playerName).set({
+                name: playerName,
+                words: markedWords,
+                timestamp: Date.now()
+            });
+            alert("Bingo card submitted!");
+        }
+        
+        function loadDashboard() {
+            document.getElementById("dashboard").style.display = "block";
+            db.ref("submissions").on("value", (snapshot) => {
+                const submissions = snapshot.val();
+                const display = document.getElementById("submissions");
+                display.innerHTML = "";
+                for (let key in submissions) {
+                    const entry = submissions[key];
+                    display.innerHTML += `<p>${entry.name}: ${entry.words.join(", ")} <button onclick="approveWinner('${key}')">Approve</button></p>`;
+                }
+            });
+        }
+        
+        function approveWinner(player) {
+            db.ref("winners/" + player).set({
+                name: player,
+                timestamp: Date.now()
+            });
+            alert(`${player} is marked as a winner!`);
+        }
+    </script>
+</body>
+</html>
